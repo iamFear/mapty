@@ -1,4 +1,6 @@
 'use strict';
+// Class: Blueprint for a house
+// Class instances: Actual Houses
 
 // prettier-ignore
 const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -11,12 +13,18 @@ let inputDuration = document.querySelector('.form__input--duration');
 let inputCadence = document.querySelector('.form__input--cadence');
 let inputElevation = document.querySelector('.form__input--elevation');
 
-// Logic Variables
-let map, mapEvent;
-
 // OOP
 class App {
-  constructor() {}
+  #map;
+  #mapEvent;
+  constructor() {
+    this._getPosition();
+
+    form.addEventListener('submit', this._newWorkout.bind(this));
+
+    // 'change' event: Activates each time the user selects a new value in the input field
+    inputType.addEventListener('change', this._toggleElevationField);
+  }
 
   // Geolocation API:
 
@@ -26,7 +34,8 @@ class App {
 
   _getPosition() {
     if (navigator) {
-      navigator.geolocation.getCurrentPosition(this._loadMap(), () =>
+      // Making the 'this' keyword of the regular function call point to our object
+      navigator.geolocation.getCurrentPosition(this._loadMap.bind(this), () =>
         alert("Sorry, we couldn't get your address.")
       );
     }
@@ -39,58 +48,55 @@ class App {
 
     console.log(`https://www.google.com/maps/@${latitude},${longitude}`);
 
-    map = L.map('map').setView(coords, 24);
+    this.#map = L.map('map').setView(coords, 24);
 
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution:
         '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-    }).addTo(map);
+    }).addTo(this.#map);
 
-    map.on('click', function (mapE) {
-      mapEvent = mapE;
-      form.classList.remove('hidden');
-
-      inputDistance.focus();
-    });
+    this.#map.on('click', this._showForm.bind(this));
   }
 
-  _showForm() {}
+  _showForm(mapE) {
+    this.#mapEvent = mapE;
+    form.classList.remove('hidden');
 
-  _toggleElevationField() {}
+    inputDistance.focus();
+  }
 
-  _newWorkout() {}
+  _toggleElevationField() {
+    inputElevation.closest('.form__row').classList.toggle('form__row--hidden');
+    inputCadence.closest('.form__row').classList.toggle('form__row--hidden');
+  }
+
+  _newWorkout(e) {
+    e.preventDefault();
+
+    // Clear input fields
+    inputDistance.value =
+      inputDuration.value =
+      inputCadence.value =
+      inputElevation.value =
+        '';
+
+    // Display marker
+    const { lat, lng } = this.#mapEvent.latlng;
+    // Displaying a marker in that position
+    L.marker([lat, lng])
+      .addTo(this.#map)
+      .bindPopup(
+        L.popup({
+          maxWidth: 250,
+          minWidth: 100,
+          autoClose: false,
+          closeOnClick: false,
+          className: 'running-popup',
+        })
+      )
+      .setPopupContent('Workout')
+      .openPopup();
+  }
 }
 
-form.addEventListener('submit', e => {
-  e.preventDefault();
-
-  // Clear input fields
-  inputDistance.value =
-    inputDuration.value =
-    inputCadence.value =
-    inputElevation.value =
-      '';
-
-  // Display marker
-  const { lat, lng } = mapEvent.latlng;
-  // Displaying a marker in that position
-  L.marker([lat, lng])
-    .addTo(map)
-    .bindPopup(
-      L.popup({
-        maxWidth: 250,
-        minWidth: 100,
-        autoClose: false,
-        closeOnClick: false,
-        className: 'running-popup',
-      })
-    )
-    .setPopupContent('Workout')
-    .openPopup();
-});
-
-// 'change' event: Activates each time the user selects a new value in the input field
-inputType.addEventListener('change', function () {
-  inputElevation.closest('.form__row').classList.toggle('form__row--hidden');
-  inputCadence.closest('.form__row').classList.toggle('form__row--hidden');
-});
+const app = new App();
