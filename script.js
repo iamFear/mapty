@@ -5,7 +5,8 @@
 // OOP
 class Workout {
   date = new Date();
-  id = Date.now();
+  id = Date.now().toString();
+  clicks = 0;
 
   constructor(coords, distance, duration) {
     this.coords = coords; // [lat, lng]
@@ -21,6 +22,11 @@ class Workout {
     this.description = `${this.type[0].toUpperCase() + this.type.slice(1)} on ${
       months[this.date.getMonth()]
     } ${this.date.getDate()}`;
+  }
+
+  click() {
+    this.clicks++;
+    console.log(this.clicks);
   }
 }
 
@@ -71,6 +77,7 @@ class App {
   #map;
   #mapEvent;
   #workouts = [];
+  #mapZoomLvl = 13;
 
   constructor() {
     this._getPosition();
@@ -79,6 +86,9 @@ class App {
 
     // 'change' event: Activates each time the user selects a new value in the input field
     inputType.addEventListener('change', this._toggleElevationField);
+
+    // Event listener for moving the map to the workout clicked
+    containerWorkouts.addEventListener('click', this._moveToPopup.bind(this));
   }
 
   // Geolocation API:
@@ -266,6 +276,29 @@ class App {
     }
 
     form.insertAdjacentHTML('afterend', html);
+  }
+
+  _moveToPopup(e) {
+    // Trick for creating an event listener on an element that has not been created yet:
+    // Use the callback of the event listener to get the item that trigerred the event
+    const workoutEl = e.target.closest('.workout');
+
+    // Guard Clause: If there's no element finish the execution
+    if (!workoutEl) return;
+
+    const workout = this.#workouts.find(
+      work => work.id === workoutEl.dataset.id
+    );
+
+    this.#map.setView(workout.coords, this.#mapZoomLvl, {
+      animate: true,
+      pan: {
+        duration: 1,
+      },
+    });
+
+    // Using the public interface
+    workout.click();
   }
 }
 
